@@ -1,22 +1,47 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Row, Col, Card, Button, Modal, Form, Badge } from 'react-bootstrap'
+import { promocoesAPI } from '../services/api'
 
 function Promocoes() {
-  const [promocoes, setPromocoes] = useState([
-    { id: 1, titulo: 'Desconto de Verão', descricao: '20% off em cortes femininos', desconto: 20, validade: '2024-02-29', ativa: true },
-    { id: 2, titulo: 'Combo Barba + Corte', descricao: 'Barba + Corte por R$ 35', desconto: 15, validade: '2024-01-31', ativa: true }
-  ])
+  const [promocoes, setPromocoes] = useState([])
   const [showModal, setShowModal] = useState(false)
   const [editingPromo, setEditingPromo] = useState(null)
 
-  const handleSave = (promo) => {
-    if (editingPromo) {
-      setPromocoes(promocoes.map(p => p.id === editingPromo.id ? { ...promo, id: editingPromo.id } : p))
-    } else {
-      setPromocoes([...promocoes, { ...promo, id: Date.now() }])
+  useEffect(() => {
+    carregarPromocoes()
+  }, [])
+
+  const carregarPromocoes = async () => {
+    try {
+      const response = await promocoesAPI.listar()
+      setPromocoes(response.data)
+    } catch (error) {
+      console.error('Erro ao carregar promoções:', error)
     }
-    setShowModal(false)
-    setEditingPromo(null)
+  }
+
+  const handleSave = async (promo) => {
+    try {
+      if (editingPromo) {
+        await promocoesAPI.atualizar(editingPromo.id, promo)
+      } else {
+        await promocoesAPI.criar(promo)
+      }
+      carregarPromocoes()
+      setShowModal(false)
+      setEditingPromo(null)
+    } catch (error) {
+      console.error('Erro ao salvar promoção:', error)
+    }
+  }
+
+  const handleDelete = async (id) => {
+    try {
+      await promocoesAPI.deletar(id)
+      carregarPromocoes()
+    } catch (error) {
+      console.error('Erro ao deletar promoção:', error)
+    }
   }
 
   return (
@@ -54,7 +79,7 @@ function Promocoes() {
                   <Button 
                     size="sm" 
                     variant="outline-danger"
-                    onClick={() => setPromocoes(promocoes.filter(p => p.id !== promocao.id))}
+                    onClick={() => handleDelete(promocao.id)}
                   >
                     Excluir
                   </Button>

@@ -1,23 +1,47 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Row, Col, Card, Table, Button, Modal, Form } from 'react-bootstrap'
+import { servicosAPI } from '../services/api'
 
 function Servicos() {
-  const [servicos, setServicos] = useState([
-    { id: 1, nome: 'Corte Masculino', preco: 25, duracao: 30 },
-    { id: 2, nome: 'Corte Feminino', preco: 45, duracao: 60 },
-    { id: 3, nome: 'Barba', preco: 15, duracao: 20 }
-  ])
+  const [servicos, setServicos] = useState([])
   const [showModal, setShowModal] = useState(false)
   const [editingService, setEditingService] = useState(null)
 
-  const handleSave = (service) => {
-    if (editingService) {
-      setServicos(servicos.map(s => s.id === editingService.id ? { ...service, id: editingService.id } : s))
-    } else {
-      setServicos([...servicos, { ...service, id: Date.now() }])
+  useEffect(() => {
+    carregarServicos()
+  }, [])
+
+  const carregarServicos = async () => {
+    try {
+      const response = await servicosAPI.listar()
+      setServicos(response.data)
+    } catch (error) {
+      console.error('Erro ao carregar serviços:', error)
     }
-    setShowModal(false)
-    setEditingService(null)
+  }
+
+  const handleSave = async (service) => {
+    try {
+      if (editingService) {
+        await servicosAPI.atualizar(editingService.id, service)
+      } else {
+        await servicosAPI.criar(service)
+      }
+      carregarServicos()
+      setShowModal(false)
+      setEditingService(null)
+    } catch (error) {
+      console.error('Erro ao salvar serviço:', error)
+    }
+  }
+
+  const handleDelete = async (id) => {
+    try {
+      await servicosAPI.deletar(id)
+      carregarServicos()
+    } catch (error) {
+      console.error('Erro ao deletar serviço:', error)
+    }
   }
 
   return (
@@ -59,7 +83,7 @@ function Servicos() {
                     <Button 
                       size="sm" 
                       variant="outline-danger"
-                      onClick={() => setServicos(servicos.filter(s => s.id !== servico.id))}
+                      onClick={() => handleDelete(servico.id)}
                     >
                       Excluir
                     </Button>

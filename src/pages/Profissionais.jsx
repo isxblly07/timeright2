@@ -1,22 +1,47 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Row, Col, Card, Button, Modal, Form } from 'react-bootstrap'
+import { profissionaisAPI } from '../services/api'
 
 function Profissionais() {
-  const [profissionais, setProfissionais] = useState([
-    { id: 1, nome: 'Carlos Silva', especialidade: 'Barbeiro', telefone: '(11) 99999-9999' },
-    { id: 2, nome: 'Ana Santos', especialidade: 'Cabeleireira', telefone: '(11) 88888-8888' }
-  ])
+  const [profissionais, setProfissionais] = useState([])
   const [showModal, setShowModal] = useState(false)
   const [editingProfessional, setEditingProfessional] = useState(null)
 
-  const handleSave = (professional) => {
-    if (editingProfessional) {
-      setProfissionais(profissionais.map(p => p.id === editingProfessional.id ? { ...professional, id: editingProfessional.id } : p))
-    } else {
-      setProfissionais([...profissionais, { ...professional, id: Date.now() }])
+  useEffect(() => {
+    carregarProfissionais()
+  }, [])
+
+  const carregarProfissionais = async () => {
+    try {
+      const response = await profissionaisAPI.listar()
+      setProfissionais(response.data)
+    } catch (error) {
+      console.error('Erro ao carregar profissionais:', error)
     }
-    setShowModal(false)
-    setEditingProfessional(null)
+  }
+
+  const handleSave = async (professional) => {
+    try {
+      if (editingProfessional) {
+        await profissionaisAPI.atualizar(editingProfessional.id, professional)
+      } else {
+        await profissionaisAPI.criar(professional)
+      }
+      carregarProfissionais()
+      setShowModal(false)
+      setEditingProfessional(null)
+    } catch (error) {
+      console.error('Erro ao salvar profissional:', error)
+    }
+  }
+
+  const handleDelete = async (id) => {
+    try {
+      await profissionaisAPI.deletar(id)
+      carregarProfissionais()
+    } catch (error) {
+      console.error('Erro ao deletar profissional:', error)
+    }
   }
 
   return (
@@ -48,7 +73,7 @@ function Profissionais() {
                   <Button 
                     size="sm" 
                     variant="outline-danger"
-                    onClick={() => setProfissionais(profissionais.filter(p => p.id !== profissional.id))}
+                    onClick={() => handleDelete(profissional.id)}
                   >
                     Excluir
                   </Button>

@@ -1,18 +1,45 @@
+import { useState, useEffect } from 'react'
 import { Row, Col, Card } from 'react-bootstrap'
+import { dashboardAPI, agendamentosAPI } from '../services/api'
 
 function Dashboard() {
-  const stats = [
-    { title: 'Agendamentos Hoje', value: '24', color: 'var(--azul-pastel)', icon: '📅' },
-    { title: 'Serviços Ativos', value: '12', color: 'var(--verde-suave)', icon: '✂️' },
-    { title: 'Profissionais', value: '8', color: 'var(--lilas-delicado)', icon: '👥' },
-    { title: 'Promoções Ativas', value: '3', color: 'var(--rosa-bebe)', icon: '🎯' }
+  const [stats, setStats] = useState({
+    agendamentosHoje: 0,
+    servicosAtivos: 0,
+    profissionais: 0,
+    promocoesAtivas: 0
+  })
+  const [proximosAgendamentos, setProximosAgendamentos] = useState([])
+
+  useEffect(() => {
+    carregarDados()
+  }, [])
+
+  const carregarDados = async () => {
+    try {
+      const [statsRes, agendamentosRes] = await Promise.all([
+        dashboardAPI.stats(),
+        agendamentosAPI.listarHoje()
+      ])
+      setStats(statsRes.data)
+      setProximosAgendamentos(agendamentosRes.data.slice(0, 3))
+    } catch (error) {
+      console.error('Erro ao carregar dados:', error)
+    }
+  }
+
+  const statsCards = [
+    { title: 'Agendamentos Hoje', value: stats.agendamentosHoje, color: 'var(--azul-pastel)', icon: '📅' },
+    { title: 'Serviços Ativos', value: stats.servicosAtivos, color: 'var(--verde-suave)', icon: '✂️' },
+    { title: 'Profissionais', value: stats.profissionais, color: 'var(--lilas-delicado)', icon: '👥' },
+    { title: 'Promoções Ativas', value: stats.promocoesAtivas, color: 'var(--rosa-bebe)', icon: '🎯' }
   ]
 
   return (
     <>
       <h1 className="mb-4">Dashboard</h1>
       <Row>
-        {stats.map((stat, index) => (
+        {statsCards.map((stat, index) => (
           <Col md={3} key={index} className="mb-4">
             <Card style={{ background: stat.color, border: 'none' }}>
               <Card.Body className="text-center">
@@ -32,18 +59,16 @@ function Dashboard() {
               <h5>Próximos Agendamentos</h5>
             </Card.Header>
             <Card.Body>
-              <div className="d-flex justify-content-between align-items-center mb-2">
-                <span>Maria Silva - Corte</span>
-                <span className="text-muted">14:00</span>
-              </div>
-              <div className="d-flex justify-content-between align-items-center mb-2">
-                <span>João Santos - Barba</span>
-                <span className="text-muted">15:30</span>
-              </div>
-              <div className="d-flex justify-content-between align-items-center">
-                <span>Ana Costa - Manicure</span>
-                <span className="text-muted">16:00</span>
-              </div>
+              {proximosAgendamentos.length > 0 ? (
+                proximosAgendamentos.map(agendamento => (
+                  <div key={agendamento.id} className="d-flex justify-content-between align-items-center mb-2">
+                    <span>{agendamento.cliente} - {agendamento.servico?.nome}</span>
+                    <span className="text-muted">{agendamento.hora}</span>
+                  </div>
+                ))
+              ) : (
+                <p className="text-muted">Nenhum agendamento para hoje</p>
+              )}
             </Card.Body>
           </Card>
         </Col>
